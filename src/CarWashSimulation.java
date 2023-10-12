@@ -1,62 +1,63 @@
-import java.util.LinkedList;
-import java.util.Queue;
-
 public class CarWashSimulation {
 
     private static final int NUM_LOCATIONS = 3;
     private static final int WASH_TIME = 240;
     private static final int MAX_WAIT_TIME = 600;
 
-    private static Queue<Car> queue = new LinkedList<>();
+    private static Car[] carsWaiting = new Car[10];
+    private static Car[] carsBeingWashed = new Car[NUM_LOCATIONS];
 
     public static void main(String[] args) {
-        // Create an array to store the status of each car wash location
-        boolean[] locationStatus = new boolean[NUM_LOCATIONS];
-        for (int i = 0; i < NUM_LOCATIONS; i++) {
-            locationStatus[i] = false;
-        }
-
         // Start the simulation loop
         while (true) {
-            // Check if there are any cars waiting in the queue
-            if (!queue.isEmpty()) {
-                // Find an available car wash location
-                int availableLocation = -1;
-                for (int i = 0; i < NUM_LOCATIONS; i++) {
-                    if (!locationStatus[i]) {
-                        availableLocation = i;
-                        break;
-                    }
+            // Check if there are any cars waiting
+            int waitingCars = 0;
+            for (Car car : carsWaiting) {
+                if (car != null) {
+                    waitingCars++;
                 }
+            }
 
-                // If there is an available location, start washing the car
-                if (availableLocation != -1) {
-                    Car car = queue.remove();
-                    locationStatus[availableLocation] = true;
-                    int finalAvailableLocation = availableLocation;
-                    new Thread(() -> {
-                        try {
-                            Thread.sleep(WASH_TIME);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                        locationStatus[finalAvailableLocation] = false;
-                        System.out.println("Car " + car.getId() + " is finished washing.");
-                    }).start();
-                } else {
-                    // If there are no available locations, check if the car has been waiting too long
-                    Car car = queue.peek();
-                    if (car.getWaitTime() > MAX_WAIT_TIME) {
-                        queue.remove();
+            // If there are no cars waiting, exit the simulation loop
+            if (waitingCars == 0) {
+                break;
+            }
+
+            // Check if there are any available car wash locations
+            int availableLocations = 0;
+            for (Car car : carsBeingWashed) {
+                if (car == null) {
+                    availableLocations++;
+                }
+            }
+
+            // If there are no available locations, check if any of the waiting cars have been waiting too long
+            if (availableLocations == 0) {
+                for (int i = 0; i < carsWaiting.length; i++) {
+                    Car car = carsWaiting[i];
+                    if (car != null && car.getWaitTime() > MAX_WAIT_TIME) {
+                        carsWaiting[i] = null;
                         System.out.println("Car " + car.getId() + " left the queue because the wait time was too long.");
                     }
                 }
-            } else {
-                // If there are no cars waiting in the queue, sleep for a bit
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+            }
+
+            // If there are any available car wash locations, start washing the waiting cars
+            for (int i = 0; i < availableLocations; i++) {
+                Car car = carsWaiting[0];
+                if (car != null) {
+                    carsWaiting[0] = null;
+                    carsBeingWashed[i] = car;
+
+                    // Simulate the washing process by waiting for a fixed amount of time
+                    try {
+                        Thread.sleep(WASH_TIME);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    carsBeingWashed[i] = null;
+                    System.out.println("Car " + car.getId() + " is finished washing.");
                 }
             }
         }
